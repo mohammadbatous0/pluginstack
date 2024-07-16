@@ -31,25 +31,31 @@ class StackExchangePlugin: FlutterPlugin, MethodCallHandler {
  private fun fetchQuestions(result: Result) {
     CoroutineScope(Dispatchers.IO).launch {
       val url = URL("https://api.stackexchange.com/2.3/questions?order=desc&sort=activity&site=stackoverflow")
-      val connection = url.openConnection() as HttpURLConnection
-      try {
-        connection.requestMethod = "GET"
-        val responseCode = connection.responseCode
-        if (responseCode == HttpURLConnection.HTTP_OK) {
-          withContext(Dispatchers.Main) {
-            result.success("Successfully fetched questions")
+      val connection = url.openConnection()
+      if (connection is HttpURLConnection) {
+        try {
+          connection.requestMethod = "GET"
+          val responseCode = connection.responseCode
+          if (responseCode == HttpURLConnection.HTTP_OK) {
+            withContext(Dispatchers.Main) {
+              result.success("Successfully fetched questions")
+            }
+          } else {
+            withContext(Dispatchers.Main) {
+              result.error("HTTP_ERROR", "Failed to fetch questions", null)
+            }
           }
-        } else {
+        } catch (e: Exception) {
           withContext(Dispatchers.Main) {
-            result.error("HTTP_ERROR", "Failed to fetch questions", null)
+            result.error("EXCEPTION", "Failed to fetch questions", e.localizedMessage)
           }
+        } finally {
+          connection.disconnect()
         }
-      } catch (e: Exception) {
+      } else {
         withContext(Dispatchers.Main) {
-          result.error("EXCEPTION", "Failed to fetch questions", e.localizedMessage)
+          result.error("INVALID_CONNECTION", "Failed to create a valid HttpURLConnection", null)
         }
-      } finally {
-        connection.disconnect()
       }
     }
   }
